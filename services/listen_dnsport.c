@@ -1394,6 +1394,7 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 	do_ip6 = cfg->do_ip6;
 	do_tcp = cfg->do_tcp;
 	do_auto = cfg->if_automatic && cfg->do_udp;
+	do_dot = cfg->ssl_service_key && cfg->ssl_service_key[0];
 	if(cfg->incoming_num_tcp == 0)
 		do_tcp = 0;
 
@@ -1425,11 +1426,33 @@ listening_ports_open(struct config_file* cfg, int* reuseport)
 				listening_ports_free(list);
 				return NULL;
 			}
+			if(do_dot && !ports_create_if(do_auto?"::0@853":"::1@853",
+				0, 0, 1,
+				&hints, portbuf, &list,
+				cfg->so_rcvbuf, cfg->so_sndbuf,
+				cfg->ssl_port, cfg->tls_additional_port,
+				reuseport, cfg->ip_transparent,
+				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
+				cfg->dnscrypt_port)) {
+				listening_ports_free(list);
+				return NULL;
+			}
 		}
 		if(do_ip4) {
 			hints.ai_family = AF_INET;
 			if(!ports_create_if(do_auto?"0.0.0.0":"127.0.0.1", 
 				do_auto, cfg->do_udp, do_tcp, 
+				&hints, portbuf, &list,
+				cfg->so_rcvbuf, cfg->so_sndbuf,
+				cfg->ssl_port, cfg->tls_additional_port,
+				reuseport, cfg->ip_transparent,
+				cfg->tcp_mss, cfg->ip_freebind, cfg->use_systemd,
+				cfg->dnscrypt_port)) {
+				listening_ports_free(list);
+				return NULL;
+			}
+			if(do_dot && !ports_create_if(do_auto?"0.0.0.0@853":"127.0.0.1@853",
+				0, 0, 1,
 				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
 				cfg->ssl_port, cfg->tls_additional_port,
